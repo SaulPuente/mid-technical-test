@@ -1,6 +1,8 @@
-from pydantic import BaseModel
 import datetime as dt
 import uuid
+
+from pydantic import BaseModel
+
 
 class _BaseLoan(BaseModel):
     amount: float
@@ -8,12 +10,12 @@ class _BaseLoan(BaseModel):
 
 
 class Loan(_BaseLoan):
-    id: uuid.UUID
+    loan_id: uuid.UUID
     created: dt.datetime
 
     class Config:
         orm_mode = True
-        from_attributes=True
+        from_attributes = True
 
 
 class CreateLoan(_BaseLoan):

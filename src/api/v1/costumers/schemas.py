@@ -1,6 +1,8 @@
-from pydantic import BaseModel
 import datetime as dt
 import uuid
+
+from pydantic import BaseModel
+
 
 class _BaseCustomer(BaseModel):
     full_name: str
@@ -8,12 +10,12 @@ class _BaseCustomer(BaseModel):
 
 
 class Customer(_BaseCustomer):
-    id: uuid.UUID
+    customer_id: uuid.UUID
     created: dt.datetime
 
     class Config:
         orm_mode = True
-        from_attributes=True
+        from_attributes = True
 
 
 class CreateCustomer(_BaseCustomer):

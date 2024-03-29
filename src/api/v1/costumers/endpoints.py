@@ -1,122 +1,85 @@
-from fastapi import APIRouter, status
-import fastapi as _fastapi
-import sqlalchemy.orm as _orm
-from core.utils.responses import EnvelopeResponse
+import re
+import sys
 import uuid
 
-from typing import TYPE_CHECKING, List
+from fastapi import APIRouter, status
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
+import api.v1.costumers.services as _services
+from api.v1.costumers.schemas import CreateCustomer, Customer
+from core.utils.responses import EnvelopeResponse
 
-import api.v1.costumers.schemas as _schemas
-
-import sys
 sys.path.append("....")
-import db.models as _models
-import db.session as _session
+from db.session import get_session  # noqa: E402
 
 router = APIRouter(prefix="/customers", tags=["Customers"])
 
-# @router.post("/Create", tags=["Customers"])
-# async def create_customer(customer: _schemas.Customer):
-#     print('iejfkj mdkmswi 0o')
-#     print(customer.model_dump())
-#     db = next(_session.get_session())
-#     print(db.add)
-#     return [{"username": "Rick"}, {"username": "Morty"}]
 
-# @router.get("", tags=["Customers"])
-# async def read_users():
-#     print('hhhhhhha---------------')
-#     return [{"username": "Rick"}, {"username": "Morty"}]
-
-db = next(_session.get_session())
-
-@router.post("/Create", response_model=_schemas.Customer)
-async def create(
-    customer: _schemas.CreateCustomer):
-    return await create_customer(customer=customer)
+def check_email(email):
+    regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b"
+    return re.fullmatch(regex, email)
 
 
-async def create_customer(
-    customer: _schemas.CreateCustomer) -> _schemas.Customer:
-    customer = _models.Customer(**customer.model_dump())
-    db = next(_session.get_session())
-    db.add(customer)
-    db.commit()
-    db.refresh(customer)
-    # db.close()
-    return _schemas.Customer.model_validate(customer)
-
-
-@router.get("/List", status_code=status.HTTP_200_OK, summary="Customers List", response_model=EnvelopeResponse)
-async def get_customers() -> EnvelopeResponse:
-    result = await get_all_customers()
+@router.post("/Create", status_code=status.HTTP_200_OK, summary="Create customer.", response_model=EnvelopeResponse)
+async def create(customer: CreateCustomer) -> EnvelopeResponse:
+    if not check_email(customer.email):
+        return EnvelopeResponse(errors="Enter a valid email.", body=None)
+    db = next(get_session())
+    result = await _services.create_customer(customer=customer, db=db)
+    db.close()
     return EnvelopeResponse(errors=None, body=result)
 
-async def get_all_customers() -> List[_schemas.Customer]:
-    # db = next(_session.get_session())
-    customers = db.query(_models.Customer).all()
-    # db.close()
-    return list(map(_schemas.Customer.model_validate, customers))
+
+@router.get("/List", status_code=status.HTTP_200_OK, summary="Customers list.", response_model=EnvelopeResponse)
+async def get_customers() -> EnvelopeResponse:
+    db = next(get_session())
+    result = await _services.get_all_customers(db)
+    db.close()
+    return EnvelopeResponse(errors=None, body={"customers": result})
 
 
-
-@router.get("/Retrieve/{customer_id}", response_model=_schemas.Customer)
+@router.get(
+    "/Retrieve/{customer_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve customer.",
+    response_model=EnvelopeResponse,
+)
 async def get_customer(customer_id: uuid.UUID):
-    customer = await _get_customer(customer_id=customer_id)
+    db = next(get_session())
+    customer = await _services.get_customer(customer_id=customer_id, db=db)
     if customer is None:
-        raise _fastapi.HTTPException(status_code=404, detail="Customer does not exist")
-
-    return customer
-
-async def _get_customer(customer_id: uuid.UUID):
-    # db = next(_session.get_session())
-    customer = db.query(_models.Customer).filter(_models.Customer.id == customer_id).first()
-    # db.close()
-    return customer
+        db.close()
+        return EnvelopeResponse(errors="Customer does not exist.", body=None)
+    db.close()
+    return EnvelopeResponse(errors=None, body=Customer.model_validate(customer))
 
 
-@router.delete("/{customer_id}")
+@router.delete(
+    "/{customer_id}", status_code=status.HTTP_200_OK, summary="Delete customer.", response_model=EnvelopeResponse
+)
 async def delete_contact(customer_id: uuid.UUID):
-    customer = await _get_customer(customer_id=customer_id)
+    db = next(get_session())
+    customer = await _services.get_customer(customer_id=customer_id, db=db)
     if customer is None:
-        raise _fastapi.HTTPException(status_code=404, detail="Customer does not exist")
-
-    await delete_customer(customer)
-
-    return "successfully deleted the Customer"
-
-async def delete_customer(customer: _models.Customer):
-    # db = next(_session.get_session())
-    db.delete(customer)
-    db.commit()
+        db.close()
+        return EnvelopeResponse(errors="Customer does not exist.", body=None)
+    await _services.delete_customer(customer, db=db)
+    db.close()
+    return EnvelopeResponse(errors=None, body="successfully deleted the customer")
 
 
-@router.put("/{customer_id}", response_model=_schemas.Customer)
-async def update_customer(
-    customer_id: uuid.UUID,
-    customer_data: _schemas.CreateCustomer,
-):
-    customer = await _get_customer(customer_id=customer_id)
+@router.put(
+    "/{customer_id}", status_code=status.HTTP_200_OK, summary="Update customer.", response_model=EnvelopeResponse
+)
+async def update_customer(customer_id: uuid.UUID, customer_data: CreateCustomer):
+    if not check_email(customer_data.email):
+        return EnvelopeResponse(errors="Enter a valid email.", body=None)
+    db = next(get_session())
+    customer = await _services.get_customer(customer_id=customer_id, db=db)
     if customer is None:
-        raise _fastapi.HTTPException(status_code=404, detail="Customer does not exist")
-    
-    return await _update_customer(
-        customer_data=customer_data, customer=customer
-    )
+        db.close()
+        return EnvelopeResponse(errors="Customer does not exist.", body=None)
 
-async def _update_customer(
-    customer_data: _schemas.CreateCustomer, customer: _models.Customer
-) -> _schemas.Customer:
-    customer.full_name = customer_data.full_name
-    if customer_data.email:
-        customer.email = customer_data.email 
+    result = await _services.update_customer(customer_data=customer_data, customer=customer, db=db)
+    db.close()
 
-    # db = next(_session.get_session())
-
-    db.commit()
-    db.refresh(customer)
-
-    return _schemas.Customer.model_validate(customer)
+    return EnvelopeResponse(errors=None, body=Customer.model_validate(result))

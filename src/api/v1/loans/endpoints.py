@@ -1,37 +1,79 @@
-from fastapi import APIRouter, status
-import fastapi as _fastapi
-import sqlalchemy.orm as _orm
-from core.utils.responses import EnvelopeResponse
+import sys
 import uuid
 
-from typing import TYPE_CHECKING, List
+from fastapi import APIRouter, status
 
-if TYPE_CHECKING:
-    from sqlalchemy.orm import Session
+import api.v1.costumers.services as _services_customers
+import api.v1.loans.services as _services
+from api.v1.loans.schemas import CreateLoan, Loan
+from core.utils.responses import EnvelopeResponse
 
-import api.v1.loans.schemas as _schemas
-
-import sys
 sys.path.append("....")
-import db.models as _models
-import db.session as _session
+from db.session import get_session  # noqa: E402
 
 router = APIRouter(prefix="/loans", tags=["Loans"])
 
-db = next(_session.get_session())
 
-@router.post("/Create", response_model=_schemas.Loan)
-async def create(
-    loan: _schemas.CreateLoan):
-    return await create_loan(loan=loan)
+@router.post("/Create", status_code=status.HTTP_200_OK, summary="Create Loan.", response_model=EnvelopeResponse)
+async def create(loan: CreateLoan):
+    if loan.amount <= 0:
+        return EnvelopeResponse(errors="Enter a valid amount.", body=None)
+    db = next(get_session())
+    customer = await _services_customers.get_customer(customer_id=loan.customer_id, db=db)
+    if customer is None:
+        db.close()
+        return EnvelopeResponse(errors="Customer does not exist.", body=None)
+    result = await _services.create_loan(loan=loan, db=db)
+    db.close()
+    return EnvelopeResponse(errors=None, body=result)
 
 
-async def create_loan(
-    loan: _schemas.CreateLoan) -> _schemas.Loan:
-    loan = _models.Loan(**loan.model_dump())
-    db = next(_session.get_session())
-    db.add(loan)
-    db.commit()
-    db.refresh(loan)
-    # db.close()
-    return _schemas.Loan.model_validate(loan)
+@router.get("/List", status_code=status.HTTP_200_OK, summary="Loans list.", response_model=EnvelopeResponse)
+async def get_loans() -> EnvelopeResponse:
+    db = next(get_session())
+    result = await _services.get_all_loans(db)
+    db.close()
+    return EnvelopeResponse(errors=None, body={"loans": result})
+
+
+@router.get(
+    "/Retrieve/{loan_id}", status_code=status.HTTP_200_OK, summary="Retrieve loan.", response_model=EnvelopeResponse
+)
+async def get_loan(loan_id: uuid.UUID):
+    db = next(get_session())
+    loan = await _services.get_loan(loan_id=loan_id, db=db)
+    if loan is None:
+        db.close()
+        return EnvelopeResponse(errors="Loan does not exist.", body=None)
+    db.close()
+    return EnvelopeResponse(errors=None, body=Loan.model_validate(loan))
+
+
+@router.delete("/{loan_id}", status_code=status.HTTP_200_OK, summary="Delete loan.", response_model=EnvelopeResponse)
+async def delete_contact(loan_id: uuid.UUID):
+    db = next(get_session())
+    loan = await _services.get_loan(loan_id=loan_id, db=db)
+    if loan is None:
+        db.close()
+        return EnvelopeResponse(errors="Loan does not exist.", body=None)
+    await _services.delete_loan(loan=loan, db=db)
+    db.close()
+    return EnvelopeResponse(errors=None, body="successfully deleted the loan")
+
+
+@router.put("/{loan_id}", status_code=status.HTTP_200_OK, summary="Update loan.", response_model=EnvelopeResponse)
+async def update_loan(loan_id: uuid.UUID, loan_data: CreateLoan):
+    if loan_data.amount <= 0:
+        return EnvelopeResponse(errors="Enter a valid amount.", body=None)
+    db = next(get_session())
+    customer = await _services_customers.get_customer(customer_id=loan_data.customer_id, db=db)
+    if customer is None:
+        db.close()
+        return EnvelopeResponse(errors="Customer does not exist.", body=None)
+    loan = await _services.get_loan(loan_id=loan_id, db=db)
+    if loan is None:
+        db.close()
+        return EnvelopeResponse(errors="Loan does not exist.", body=None)
+    result = await _services.update_loan(loan_data=loan_data, loan=loan, db=db)
+    db.close()
+    return EnvelopeResponse(errors=None, body=Loan.model_validate(result))
