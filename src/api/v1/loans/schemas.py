@@ -10,7 +10,7 @@ class _BaseLoan(BaseModel):
 
 
 class Loan(_BaseLoan):
-    loan_id: uuid.UUID
+    id_: uuid.UUID
     created: dt.datetime
 
     class Config:

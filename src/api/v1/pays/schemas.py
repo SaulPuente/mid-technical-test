@@ -4,12 +4,14 @@ import uuid
 from pydantic import BaseModel
 
 
-class _BaseCustomer(BaseModel):
-    full_name: str
-    email: str
+class _BasePay(BaseModel):
+    amount: float
+    loan_id: uuid.UUID
+    paid: int
+    pay_date: dt.datetime
 
 
-class Customer(_BaseCustomer):
+class Pay(_BasePay):
     id_: uuid.UUID
     created: dt.datetime
 
@@ -18,5 +20,5 @@ class Customer(_BaseCustomer):
         from_attributes = True
 
 
-class CreateCustomer(_BaseCustomer):
+class CreatePay(_BasePay):
     pass

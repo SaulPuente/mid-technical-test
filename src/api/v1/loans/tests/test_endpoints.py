@@ -12,7 +12,7 @@ class TestLoanEndpoints(unittest.TestCase):
         cls.client = TestClient(app)
 
     def test_list(self):
-        url = "/loans/List"
+        url = "/v1/loans/List"
         response = self.client.get(url)
 
         body = response.json().get("body")

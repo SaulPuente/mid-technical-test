@@ -19,13 +19,13 @@ async def create_customer(customer: CreateCustomer, db: "Session") -> Customer:
     return Customer.model_validate(customer)
 
 
-async def get_all_customers(db: "Session") -> list[Customer]:
-    customers = db.query(_models.Customer).all()
+async def get_all_customers(db: "Session", limit, offset) -> list[Customer]:
+    customers = db.query(_models.Customer).limit(limit).offset(offset)
     return list(map(Customer.model_validate, customers))
 
 
 async def get_customer(customer_id: uuid.UUID, db: "Session"):
-    return db.query(_models.Customer).filter(_models.Customer.id == customer_id).first()
+    return db.query(_models.Customer).filter(_models.Customer.id_ == customer_id).first()
 
 
 async def delete_customer(customer: _models.Customer, db: "Session"):

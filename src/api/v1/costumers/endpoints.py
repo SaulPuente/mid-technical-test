@@ -2,7 +2,7 @@ import re
 import sys
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Query, status
 
 import api.v1.costumers.services as _services
 from api.v1.costumers.schemas import CreateCustomer, Customer
@@ -30,9 +30,9 @@ async def create(customer: CreateCustomer) -> EnvelopeResponse:
 
 
 @router.get("/List", status_code=status.HTTP_200_OK, summary="Customers list.", response_model=EnvelopeResponse)
-async def get_customers() -> EnvelopeResponse:
+async def get_customers(limit: int = Query(100, ge=0), offset: int = Query(0, ge=0)) -> EnvelopeResponse:
     db = next(get_session())
-    result = await _services.get_all_customers(db)
+    result = await _services.get_all_customers(db, limit, offset)
     db.close()
     return EnvelopeResponse(errors=None, body={"customers": result})
 

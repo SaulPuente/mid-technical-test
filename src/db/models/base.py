@@ -12,7 +12,7 @@ class Base(DeclarativeBase):
 
 
 class UUIDMixin:
-    id = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)  # noqa: A003
+    id_ = Column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
 
 
 class TimeStampedMixin:

@@ -1,1 +1,25 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="4.743" timestamp="2024-03-27T04:26:06.784523" hostname="caa22a72b9ba"><testcase classname="src.api.healthcheck.tests.test_endpoints.TestHelathcheckEndpoints" name="test_healthcheck" time="0.255" /></testsuite></testsuites>
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="2" skipped="0" tests="2" time="10.055" timestamp="2024-04-04T20:04:43.000006" hostname="d4e76cdce06f"><testcase classname="src.api.v1.costumers.tests.test_endpoints.TestCustomerEndpoints" name="test_list" time="0.869"><failure message="AssertionError: 400 != 200">self = &lt;src.api.v1.costumers.tests.test_endpoints.TestCustomerEndpoints testMethod=test_list&gt;
+
+    def test_list(self):
+        url = "/v1/customers/List"
+        response = self.client.get(url)
+
+        body = response.json().get("body")
+        expected_keys = ["customers"]
+
+&gt;       self.assertEqual(response.status_code, status.HTTP_200_OK)
+E       AssertionError: 400 != 200
+
+src/api/v1/costumers/tests/test_endpoints.py:21: AssertionError</failure></testcase><testcase classname="src.api.v1.loans.tests.test_endpoints.TestLoanEndpoints" name="test_list" time="0.100"><failure message="AssertionError: 400 != 200">self = &lt;src.api.v1.loans.tests.test_endpoints.TestLoanEndpoints testMethod=test_list&gt;
+
+    def test_list(self):
+        url = "/v1/loans/List"
+        response = self.client.get(url)
+
+        body = response.json().get("body")
+        expected_keys = ["loans"]
+
+&gt;       self.assertEqual(response.status_code, status.HTTP_200_OK)
+E       AssertionError: 400 != 200
+
+src/api/v1/loans/tests/test_endpoints.py:21: AssertionError</failure></testcase></testsuite></testsuites>

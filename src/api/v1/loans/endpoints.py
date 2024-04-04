@@ -1,11 +1,14 @@
 import sys
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, status
 
 import api.v1.costumers.services as _services_customers
 import api.v1.loans.services as _services
+import api.v1.pays.services as _services_pays
 from api.v1.loans.schemas import CreateLoan, Loan
+from api.v1.pays.schemas import CreatePay
 from core.utils.responses import EnvelopeResponse
 
 sys.path.append("....")
@@ -23,7 +26,14 @@ async def create(loan: CreateLoan):
     if customer is None:
         db.close()
         return EnvelopeResponse(errors="Customer does not exist.", body=None)
+    loan.amount = loan.amount + loan.amount * 0.15 + loan.amount * 0.15 * 0.16
     result = await _services.create_loan(loan=loan, db=db)
+    today = datetime.now(timezone.UTC)
+    pay_amount = loan.amount / 60
+    for i in range(1, 61):
+        pay = CreatePay(amount=pay_amount, loan_id=result.id_, paid=0, pay_date=today + timedelta(days=i))
+        await _services_pays.create_pay(pay=pay, db=db)
+
     db.close()
     return EnvelopeResponse(errors=None, body=result)
 

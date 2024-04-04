@@ -25,7 +25,7 @@ async def get_all_loans(db: "Session") -> list[Loan]:
 
 
 async def get_loan(loan_id: uuid.UUID, db: "Session"):
-    return db.query(_models.Loan).filter(_models.Loan.id == loan_id).first()
+    return db.query(_models.Loan).filter(_models.Loan.id_ == loan_id).first()
 
 
 async def delete_loan(loan: _models.Loan, db: "Session"):
