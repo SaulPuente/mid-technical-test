@@ -1,6 +1,7 @@
+import datetime as dt
 import sys
 import uuid
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, status
 
@@ -28,7 +29,7 @@ async def create(loan: CreateLoan):
         return EnvelopeResponse(errors="Customer does not exist.", body=None)
     loan.amount = loan.amount + loan.amount * 0.15 + loan.amount * 0.15 * 0.16
     result = await _services.create_loan(loan=loan, db=db)
-    today = datetime.now(timezone.UTC)
+    today = datetime.now(dt.UTC)
     pay_amount = loan.amount / 60
     for i in range(1, 61):
         pay = CreatePay(amount=pay_amount, loan_id=result.id_, paid=0, pay_date=today + timedelta(days=i))
